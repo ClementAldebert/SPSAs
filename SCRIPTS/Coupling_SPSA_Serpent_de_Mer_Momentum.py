@@ -28,7 +28,8 @@ Created on Mon Jul  2 10:48:05 2018
 #*************Packages import******************#
 #*******The package import******************#
 import sys
-sys.path.append('../')
+sys.path.append('../SPSA_lib') # For SPSA
+sys.path.append('../Serpent_de_Mer') # For Serpent de Mer
 
 import numpy as np
 import Object_SPSA_02_07_Momentum as SPSA # Object for the SPSA
