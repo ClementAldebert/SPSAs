@@ -1,0 +1,15 @@
+Hello !
+
+Ici j'ai placé les objets nécessaire pour l'exécution du code resolvant le profil vertical de courant à l'équilibre avec un modèle de fermeture turbulente KPP, toute la colonne d'eau consideree faisant partie dela couche limite de surface. Le profil du paramètre de diffusion turbulente y est décrit par un polynome de degré 3, dépendant de 2 paramètres (2 sont contraints par des conditions aux limites en surface). Ce problème parabolique à une solution non-triviale calculable facilement. Without Coriolis
+
+This directory contains:
+run_steady.exe is the compiled C++ code that runs the model
+param.txt is the external file storing all parameter values
+param_surf2df.txt is the external file storing the two parameters that drive the profile of turbulent diffusion coefficient
+RES is the directory for outputs: nu_steady.txt is the turbulent diffusion coefficient (1st row: depth, 2nd row: value) and u_steady.txt is the resulting horizontal current profile at equilibrium (1st row: depth, 2nd row: value)
+Data is the directory containing 'data' for optimization, here the outputs of a reference simulation
+
+Pour toute question : clement.aldebert.phd@gmail.com
+
+Dernière modification le 09/07/2018 à 15:00 GMT+2
+

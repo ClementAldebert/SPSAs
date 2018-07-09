@@ -1,0 +1,22 @@
+-10	maximum depth (meters)
+-0.1	delta z (meters)
+0.1	delta t (s)
+9.81	g gravity (m/s2)
+0.4	kappa von Karman
+0	f Coriolis (s-1)
+1000	rho_ref reference volumic mass (kg/m3)
+5e-3	nu_0 KPP
+0.7	Ri_0 KPP Richardson
+0.45	Ri_c KPP Richardson
+0.1	fraction of depth use to average in the search for surface layer thickness
+-8	maximum depth use to average in the search for surface layer thickness (m)
+1e-4	nu_wm internal waves for moments
+98.96	c_s Monin-Obukov
+-28.86	a_s Monin-Obukov
+-1	xi_s Monin-Obukov
+8.38	c_m Monin-Obukov
+1.26	a_m Monin-Obukov
+-0.2	xi_m Monin-Obukov
+1	surface current (u0) useless and deprecated in the code (enfin ca depend)
+5e-7	surface vertical turbulence (tau_xz(0))
+1e-10	surface buoyancy flux
