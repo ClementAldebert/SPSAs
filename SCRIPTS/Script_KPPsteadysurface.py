@@ -65,8 +65,8 @@ Y_size=Test_SPSA.Y.size//2
 # Dictionnaries for looping on the different SPSA's
 
 List_SPSA=['SPSA vanilla','SPSA one-sided','SPSA mean','SPSA momentum',
-           'SPSA adaptative step','SPSA stochastic directions',
-           'SPSA stochastic directions with momentum']
+           'SPSA adaptative step','SPSA accelerating step',
+           'SPSA stochastic directions','SPSA stochastic directions with momentum']
 
 List=['SPSA vanilla']
 SPSA_methods={'SPSA vanilla':Test_SPSA.SPSA_vanilla,
@@ -74,11 +74,13 @@ SPSA_methods={'SPSA vanilla':Test_SPSA.SPSA_vanilla,
                 'SPSA mean':Test_SPSA.SPSA_mean,
                 'SPSA momentum':Test_SPSA.SPSA_momentum,
                 'SPSA adaptative step':Test_SPSA.SPSA_adaptative_step_size,
+                'SPSA accelerating step':Test_SPSA.SPSA_accelerating_step_size,
                 'SPSA stochastic directions':Test_SPSA.SPSA_stochastic_direction,
                 'SPSA stochastic directions with momentum':Test_SPSA.SPSA_stochastic_direction_momentum}
 
 SPSA_arg={'SPSA vanilla':None,'SPSA one-sided':None,'SPSA mean':2,
                 'SPSA momentum':None,'SPSA adaptative step':2.,
+                'SPSA accelerating step':2.,
                 'SPSA stochastic directions':2,
                 'SPSA stochastic directions with momentum':2}
 # Here we store the arguments for the various SPSA, we do not use dictionnary

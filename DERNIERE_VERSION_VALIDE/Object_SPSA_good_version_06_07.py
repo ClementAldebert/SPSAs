@@ -398,6 +398,60 @@ class SPSA():
             
             self.J.append(self.cost_func_wrapper(self.Y))
             # We append the last value
+                    
+    def SPSA_accelerating_step_size(self,mult_size):
+        """ A version of SPSA estimation where we compare the angle between
+        two evaluation of the gradient to get the step size of the next modi-
+        fication of the parameters vector. We use a normal gain sequence ak
+        that we multiply by a factor mult_size^cos(theta), where theta designate 
+        the angle between the estimation of the gradient at the last step
+        and this step estimation of the gradient.
+        
+        INPUTS :
+         mult_size : basis for the multiplicative factor mult_size^cos(theta),
+         positive float
+            """
+        
+        self.J.append(self.cost_func_wrapper(self.Y)) 
+        # We start our first estimate
+        
+        while self.J[-1] > self.tol and self.k_grad < self.n_iter :
+            # We iterate until we reach a certain estimate or a certain number
+            # Of iterations
+        
+            self.k_grad+=1
+            
+            self.update_c()
+            
+            # Gradient estimation
+            grad_k=self.grad()
+            
+            # Adapting step size
+            if self.k_grad==1:
+               # Then we set the factor to one
+               theta=1.
+               print('Ich bin in Accelerating-SPSA !')
+            else :
+                # And here we try and compute it
+                angle=np.dot(grad_k,grad_k_1)/(\
+                np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
+                +np.finfo(np.float).eps) # I regularize with a machine epsilon
+                theta=mult_size**(angle)
+                self.a*=theta  # uptade the gain values
+
+            self.Y-= np.dot(self.a,grad_k) # We call directly the 
+            # gradient estimate in the dot product
+            
+            # Saving the gradient value
+            grad_k_1=grad_k.copy()
+            
+            # Plotting the animation
+            if self.k_grad%self.n_anim==0 : 
+                if self.anim :
+                    self.Anim_func() # Call the function for animation
+            
+            self.J.append(self.cost_func_wrapper(self.Y))
+            # We append the last value
             
     def SPSA_stochastic_direction(self,batch_size):
             """ A version of SPSA estimation where we search the gradient on 
