@@ -37,12 +37,19 @@ class SPSA():
         self.k_grad=0 # Number of estimates of the gradient
         self.k_costfun=0 # Number of calls for the model/cost_function
         
-        self.Y=np.array(Y,dtype=complex) # Vector of parameters
+        if comp:
+            self.Y=np.array(Y,dtype=complex) # Vector of parameters
+        else :
+            self.Y=np.array(Y) # Vector of parameters
         self.vec_size=Y.size
         self.comp=comp
-        self.c=np.ones(self.vec_size,dtype=complex) # Update for parameters
-        self.a=np.eye(self.vec_size,dtype=complex) # weight of the gradient 
+        if comp :
+            self.c=np.ones(self.vec_size,dtype=complex) # Update for parameters
+            self.a=np.eye(self.vec_size,dtype=complex) # weight of the gradient 
         
+        else :
+            self.c=np.ones(self.vec_size) # Update for parameters
+            self.a=np.eye(self.vec_size) # weight of the gradient 
         self.gamma=gamma
         self.alpha=alpha
         self.A=A # Tuning parameters for the SPSA
@@ -80,10 +87,12 @@ class SPSA():
         """ We use this function to perturb vector in a symmetric fashion"""
         
         delta=(np.array([random.randint(0,1) for p in \
-                         range(self.vec_size)],dtype=complex)-0.5)*2. 
+                         range(self.vec_size)])-0.5)*2. 
     # Perturbation vector
     
         if self.comp :
+            delta=(np.array([random.randint(0,1) for p in \
+                         range(self.vec_size)],dtype=complex)-0.5)*2. 
             delta+=(np.array([random.randint(0,1) for p in \
                          range(self.vec_size)])-0.5)*2j # Imaginary part
              
@@ -134,13 +143,15 @@ class SPSA():
         # vectors
         
         if self.dir_mat is not None: # If dir_mat is not null
-            # Modifying them to get the direction
-            Y_plus=self.dir_mat*Y_plus
-            Y_minus=self.dir_mat*Y_minus
+            # Modifying them to get the direction but we cannot
+            # Use simply the above function
+            Y_plus=self.Y+self.dir_mat*delta_k
+            Y_minus=self.Y-self.dir_mat*delta_k
         
         
         grad_estim=(self.cost_func_wrapper(Y_plus)-\
-        self.cost_func_wrapper(Y_minus))/delta_k # Estimation of the gradient
+        self.cost_func_wrapper(Y_minus))/(2.*delta_k)
+                    # Estimation of the gradient
         
         if self.dir_mat is not None:
             # Correction for the directions that we want
@@ -164,7 +175,7 @@ class SPSA():
         grad_estim=(self.cost_func_wrapper(Y_plus)-self.J[-1])/delta_k 
         # Estimation of the gradient
         
-        if self.dir_mat:
+        if self.dir_mat is not None:
             # Correction for the directions that we want
             grad_estim=self.dir_mat*grad_estim
         
@@ -426,7 +437,8 @@ class SPSA():
                 self.update_dir_mat(batch_size) # We update the stochastic
                 # Directions matrix
                 
-                self.Y-=np.dot(self.a,self.grad()) # We call directly the 
+                self.Y-=np.dot(self.a,self.grad())*float(self.vec_size)/\
+                    float(batch_size)# We call directly the 
                 # gradient estimate in the dot product
                 
                 # Plotting the animation
@@ -488,7 +500,8 @@ class SPSA():
                             grad_k[i]=grad_k[i] # We just keep it
                                             
                 
-                self.Y-=np.dot(self.a,grad_k) # We call directly the 
+                self.Y-=np.dot(self.a,grad_k)*float(self.vec_size)/\
+                    float(batch_size) # We call directly the 
                 # gradient estimate in the dot product
                 
                 # Plotting the animation

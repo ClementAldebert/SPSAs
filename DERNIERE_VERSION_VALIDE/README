@@ -2,4 +2,4 @@ Hello !
 
 Ici on stocke la dernière version de la librairie SPSA qui a été validée. Ca sert de jalon.
 
-Dernière mise à jour : le 06/07/2018
+Dernière mise à jour : le 10/07/2018 -> Ajout de fonctions avec directions stochastiques fonctionnelles. Correction de l'estimation de gradient et de gradient avec direction stochastique et aussi modification de la nature complexe de certains paramètres, afin d'éviter de devoir utiliser des vecteurs de variables complexes quand ça n'est pas nécessaire.
