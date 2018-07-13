@@ -54,7 +54,7 @@ def Cost_func(theta) :
 #************Declaration of variables**********#
 #************For the SPSA**********************#
 args={'Y':np.ones(2),'cost_func':Cost_func,
-      'tol':1e-8,'n_iter':1000,'gamma':0.101,'alpha':0.602,'A':100,
+      'tol':1e-8,'n_iter':10000,'gamma':0.101,'alpha':0.602,'A':1000,
       'comp':False,'anim':True} 
 # Arguments for the SPSA
 
