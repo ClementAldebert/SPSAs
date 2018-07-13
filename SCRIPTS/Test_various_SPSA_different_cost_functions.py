@@ -1,106 +1,109 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jul  9 09:45:38 2018
+Created on Tue Jul 10 16:45:13 2018
 
 @author: koenig.g
 """
 
 ###############################################
-# Test of different SPSA routines on a Serpent#
-# De Mer code. By G.Koenig, the 06/07/2018    #
-# Modified the 10/07/2018 to take multiple ar-#
-# guments in functions call                   #
+# Test of different SPSA routines on typical  #
+# Functions in optimization. By G. Koenig, the#
+# 10/07/2018                                  #
 ###############################################
 
 
 #*************Packages import******************#
 #*******The package import******************#
+import sys
+sys.path.append('../SPSA_lib') # For SPSA
+
 
 import numpy as np
-import Object_SPSA_good_version_06_07 as SPSA # Object for the SPSA
-import Serpent_de_Mer_eta_Matricial as seasnake # seasnake code
+import Object_SPSA_good_version_10_07 as SPSA # Object for the SPSA
 import matplotlib.pyplot as plt
 import scipy.linalg
-import timeit
+import timeit,random
 
 #************Cost_function*********************#
+# Those are taken from the script Ndtestfuncs, from
+# http://www-optima.amp.i.kyoto-u.ac.jp/member/student/hedar/Hedar_files/TestGO.htm
+# Sphere
+#def Cost_func(x) :
+#    """ Here we use a Sphere function"""
+#    x = np.asarray_chkfinite(x)
+#    return np.sum( x**2 )
 
-def Cost_func(BC_vec) :
-    """ Here we iterate the forward model and compute the cost function."""
+# Ackley
     
-    # Using the function attribute to import the Seasnake class
-    SPM=Cost_func.seasnake_object
-    # And the data vector
-    Data_vec=Cost_func.data_vec
-    
-    # Recreating the vector of BC into the corresponding shape
-    BC_size=BC_vec.size//2 # Floor division to be sure
-    BC_vec=np.array(BC_vec[0:BC_size]+1j*BC_vec[BC_size:],dtype=complex)
-    
-    # Solving
-    SPM.X_eta=scipy.sparse.linalg.spsolve(SPM.A_eta,
-                                          np.dot(SPM.B_eta.toarray(),BC_vec))
-        # Return the quadratic cost function
-    
-    return scipy.linalg.norm(SPM.X_eta-Data_vec)
+#def Cost_func( x, a=20, b=0.2, c=2.*np.pi ):
+#    # Here we use and Ackley function
+#    x = np.asarray_chkfinite(x)  # ValueError if any NaN or Inf
+#    n = len(x)
+#    s1 = np.sum( x**2 )
+#    s2 = np.sum( np.cos( c * x ))
+#    return -a*np.exp( -b*np.sqrt( s1 / n )) - np.exp( s2 / n ) + a + np.exp(1)
 
-#***********Creating the forward model*********#
-    
-# Creating and initializing the seasnake_data
-SPM_obj=seasnake.SerpentdeMerMatricial_eta() 
+# Rosenbrock function
+def Cost_func( x ):
+    """ http://en.wikipedia.org/wiki/Rosenbrock_function """
+        # a sum of squares, so LevMar (scipy.optimize.leastsq) is pretty good
+        # Here we use a Rosenbrock function
+    x = np.asarray_chkfinite(x)
+    x0 = x[:-1]
+    x1 = x[1:]
+    return (np.sum( (1 - x0) **2 )
+        + 100 * np.sum( (x1 - x0**2) **2 ))
 
-# Linking this object with the cost function
-Cost_func.seasnake_object=SPM_obj
-
-# Getting the data    
-SPM_obj.set_grid_manually(20,20,dx=200.,dy=200.)
-
-# Setting BC's
-SPM_obj.sol_Kelvin_wave()
-SPM_obj.eta[1:-1,1:-1]=0.
-
-#Getting the data
-SPM_obj.create_bc_vector_overelevation() # Y vector
-SPM_obj.create_solving_matrix_overelevation() # A matrix
-SPM_obj.create_projection_matrix_overelevation() # Projection of boundary
-
-# Solving 
-
-Cost_func.data_vec=scipy.sparse.linalg.spsolve(SPM_obj.A_eta,
-                        np.dot(SPM_obj.B_eta.toarray(),SPM_obj.Y_eta)) 
-# Here are the Data
-
+# Rastrigin function
+#def Cost_func( x ):  
+#    # Rastrigin function
+#    x = np.asarray_chkfinite(x)
+#    n = len(x)
+#    return 10*n + np.sum( x**2 - 10 * np.cos( 2 * np.pi * x ))
 #************Declaration of variables**********#
 #************For the SPSA**********************#
-args={'Y':np.zeros(SPM_obj.Y_eta.size*2),'cost_func':Cost_func,
-      'tol':1e-8,'n_iter':100,'gamma':0.101,'alpha':0.602,'A':6e3,
-      'comp':False,'anim':False} 
+# Random init for the sphere
+#args={'Y':np.array([random.random()*200.-100. for p in range(60)]),
+#      'cost_func':Cost_func,'tol':1e-8,'n_iter':20,
+#      'gamma':0.101,'alpha':0.602,'A':1e3,'comp':False,'anim':False} 
+# Random init for the Ackley function
+#args={'Y':np.array([random.random()*10.24-5.12 for p in range(60)]),
+#      'cost_func':Cost_func,'tol':1e-8,'n_iter':20,
+#      'gamma':0.101,'alpha':0.602,'A':1e3,'comp':False,'anim':False} 
+# Random init for the Rosenbrock function
+#args={'Y':np.array([random.random()*64.-32. for p in range(60)]),
+#      'cost_func':Cost_func,'tol':1e-8,'n_iter':20,
+#      'gamma':0.101,'alpha':0.602,'A':1e3,'comp':False,'anim':False} 
+# Random init for the Rastrigin function
+args={'Y':np.array([random.random()*4.096-2.048 for p in range(60)]),
+      'cost_func':Cost_func,'tol':1e-8,'n_iter':20,
+      'gamma':0.101,'alpha':0.602,'A':1e3,'comp':False,'anim':False} 
 # Arguments for the SPSA
 
 Test_SPSA=SPSA.SPSA(**args) # We initialize it
-
-Y_size=Test_SPSA.Y.size//2
 
 # Dictionnaries for looping on the different SPSA's
 
 List_SPSA=['SPSA vanilla','SPSA one-sided','SPSA mean','SPSA momentum',
            'SPSA adaptative step','SPSA stochastic directions',
-           'SPSA stochastic directions with momentum']
-
-List=['SPSA vanilla']
+           'SPSA stochastic directions with momentum',
+           'SPSA stochastic directions with RMS hessian']
 SPSA_methods={'SPSA vanilla':Test_SPSA.SPSA_vanilla,
               'SPSA one-sided':Test_SPSA.SPSA_one_sided,
                 'SPSA mean':Test_SPSA.SPSA_mean,
                 'SPSA momentum':Test_SPSA.SPSA_momentum,
                 'SPSA adaptative step':Test_SPSA.SPSA_adaptative_step_size,
                 'SPSA stochastic directions':Test_SPSA.SPSA_stochastic_direction,
-                'SPSA stochastic directions with momentum':Test_SPSA.SPSA_stochastic_direction_momentum}
+                'SPSA stochastic directions with momentum':Test_SPSA.SPSA_stochastic_direction_momentum,
+                'SPSA stochastic directions with RMS hessian':Test_SPSA.SPSA_stochastic_RMS_prop}
 
 SPSA_arg={'SPSA vanilla':None,'SPSA one-sided':None,'SPSA mean':{'n_mean':2},
                 'SPSA momentum':None,'SPSA adaptative step':{'mult_size':2.},
                 'SPSA stochastic directions':{'batch_size':20},
-                'SPSA stochastic directions with momentum':{'batch_size':20}}
+                'SPSA stochastic directions with momentum':{'batch_size':20},
+                'SPSA stochastic directions with RMS hessian':
+                    {'batch_size':20,'mom_coeff':0.5}}
 # Here we store the arguments for the various SPSA, we do not use dictionnary
 # In dictionnary yet. But it may become useful
     
@@ -114,8 +117,19 @@ for ln in List_SPSA:
     # Reinitializing
     Test_SPSA.__init__(**args)
     # Setting gain parameters
-    Test_SPSA.c*=SPM_obj.Y_eta.mean().real/10.
-    Test_SPSA.a*=SPM_obj.Y_eta.mean().real/200.
+    # Parameters for the Sphere
+#    Test_SPSA.c*=1e-12
+#    Test_SPSA.a*=1e-12
+    # Parameters for the Ackley function
+#    Test_SPSA.c*=1e-12
+#    Test_SPSA.a*=1e-12
+#    # Parameters for the Rosenbrock function
+#    Test_SPSA.c*=1e-12
+#    Test_SPSA.a*=1e-12
+    # Parameters for the Rastrigin function
+    Test_SPSA.c*=1e-12
+    Test_SPSA.a*=1e-12
+
     
     # Counting execution time
     t1=timeit.default_timer()
@@ -132,29 +146,7 @@ for ln in List_SPSA:
     # Saving data
     SPSA_J_values[ln]=Test_SPSA.J
 
-    SPSA_Y_values[ln]=np.array(Test_SPSA.Y[0:Y_size]+1j*Test_SPSA.Y[Y_size:],dtype=complex)
-
-
-#************TOTAL INVERSION PROCEDURE*********#
-
-# We used to cost_func.data_vec cause this is were we store the original good 
-# Solution. If we used X_eta we will have the solution computed at the last
-# SPSA iteration
-
-t1=timeit.default_timer()
-Y_inv=scipy.sparse.linalg.lsqr(SPM_obj.B_eta,SPM_obj.A_eta*Cost_func.data_vec)
-Y_inv=Y_inv[0] # So that I do not save the additional values it gives me
-# copying time
-SPSA_exec_time['Total inverse']=timeit.default_timer()-t1
-# We have to modify it a little to get something that can fit in the cost
-# Function
-Cost_func_inv=Cost_func(np.hstack([Y_inv.real,Y_inv.imag])) 
-# To know if the total inversion worked well
-# Adding the total inverse formulation
-List_SPSA.append('Total inverse')
-SPSA_J_values['Total inverse'] = Cost_func_inv*np.ones(args['n_iter'])
-SPSA_Y_values['Total inverse'] = Y_inv
-SPSA_exec_model['Total inverse'] = 1
+    SPSA_Y_values[ln]=Test_SPSA.Y
 #*********Now we can plot************************#
 # We use dictionnary and list to store variables, it will be me easier to use
 # Than having a lot of times the same instruction
@@ -172,8 +164,7 @@ fig_mod=plt.figure()
 ax_mod=fig_mod.add_subplot(1,1,1)
 ctr=0 # For position of bars
 for ln in List_SPSA:
-    ax.plot(np.hstack([SPSA_Y_values[ln].real,SPSA_Y_values[ln].imag]),
-            marker='*',label=ln)
+    ax.plot(SPSA_Y_values[ln],marker='*',label=ln)
     # Here we plot each result and we concatenate the real and imaginary part
     ax_J.plot(SPSA_J_values[ln],label=ln)
     # Here we plot the cost function on another graph
@@ -187,7 +178,10 @@ ax.set_xlabel('# Of component of the bc vector')
 ax.set_ylabel('Value (arbitrary unit)')
 # Data figure
 ax_J.legend(loc='best')
-ax_J.set_yscale('log')
+try :
+    ax_J.set_yscale('log')
+except :
+    pass
 ax_J.set_xlabel('Iteration')
 ax_J.set_ylabel('Cost function')
 # Cost function figure
