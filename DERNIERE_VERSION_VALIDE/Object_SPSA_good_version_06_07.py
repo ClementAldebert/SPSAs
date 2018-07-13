@@ -62,6 +62,10 @@ class SPSA():
         self.anim=anim # To determine if we use the animation
         self.n_anim=100 # To determine the frequency of refreshing of the
         # Animation
+
+        self.acc=1  # acceleration factor (product of thetas in accelerating method)
+        self.max_acc=5 # facteur maximal d'acceleration
+
     #################################################################
     #           FUNCTIONS USED FOR THE SPSA                         #
     #################################################################
@@ -139,7 +143,7 @@ class SPSA():
             Y_minus=self.dir_mat*Y_minus
         
         
-        grad_estim=(self.cost_func_wrapper(Y_plus)-\
+        grad_estim=0.5*(self.cost_func_wrapper(Y_plus)-\
         self.cost_func_wrapper(Y_minus))/delta_k # Estimation of the gradient
         
         if self.dir_mat is not None:
@@ -421,7 +425,7 @@ class SPSA():
         
             self.k_grad+=1
             
-            self.update_c()
+#            self.update_c()
             
             # Gradient estimation
             grad_k=self.grad()
@@ -437,9 +441,10 @@ class SPSA():
                 np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
                 +np.finfo(np.float).eps) # I regularize with a machine epsilon
                 theta=mult_size**(angle)
-                self.a*=theta  # uptade the gain values
+                self.acc*=theta
+                if self.acc > self.max_acc: self.acc=self.max_acc
 
-            self.Y-= np.dot(self.a,grad_k) # We call directly the 
+            self.Y-= np.dot(self.a,grad_k)*self.acc # We call directly the 
             # gradient estimate in the dot product
             
             # Saving the gradient value
