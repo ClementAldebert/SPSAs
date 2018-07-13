@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jul  6 17:56:08 2018
+Created on Mon Jul  9 14:51:46 2018
 
 @author: koenig.g
 """
@@ -10,7 +10,8 @@ Created on Fri Jul  6 17:56:08 2018
 # Object of SPSA that store the functions that#
 # Have been tested and are functioning so far #
 # We're sure that everything is working       #
-# Last modification by G.Koenig the 06/07/2018#
+# Last modification by G.Koenig the 09/07/2018#
+# To improve the stochastic direction SPSA    #
 ###############################################
 
 
@@ -49,7 +50,8 @@ class SPSA():
         
         else :
             self.c=np.ones(self.vec_size) # Update for parameters
-            self.a=np.eye(self.vec_size) # weight of the gradient 
+            self.a=np.eye(self.vec_size) # weight of the gradient
+            
         self.gamma=gamma
         self.alpha=alpha
         self.A=A # Tuning parameters for the SPSA
@@ -69,10 +71,6 @@ class SPSA():
         self.anim=anim # To determine if we use the animation
         self.n_anim=100 # To determine the frequency of refreshing of the
         # Animation
-
-        self.acc=1  # acceleration factor (product of thetas in accelerating method)
-        self.max_acc=5 # facteur maximal d'acceleration
-
     #################################################################
     #           FUNCTIONS USED FOR THE SPSA                         #
     #################################################################
@@ -96,7 +94,8 @@ class SPSA():
     
         if self.comp :
             delta=(np.array([random.randint(0,1) for p in \
-                         range(self.vec_size)],dtype=complex)-0.5)*2. 
+                         range(self.vec_size)],dtype=complex)-0.5)*2.
+    
             delta+=(np.array([random.randint(0,1) for p in \
                          range(self.vec_size)])-0.5)*2j # Imaginary part
              
@@ -147,13 +146,14 @@ class SPSA():
         # vectors
         
         if self.dir_mat is not None: # If dir_mat is not null
-            # Modifying them to get the direction but we cannot
+            # Modifying them to get the direction, but we cannot
             # Use simply the above function
             Y_plus=self.Y+self.dir_mat*delta_k
             Y_minus=self.Y-self.dir_mat*delta_k
-
-            grad_estim=(self.cost_func_wrapper(Y_plus)-\
-                self.cost_func_wrapper(Y_minus))/(2.*delta_k)
+        
+        
+        grad_estim=(self.cost_func_wrapper(Y_plus)-\
+        self.cost_func_wrapper(Y_minus))/(2.*delta_k)
                     # Estimation of the gradient
         
         if self.dir_mat is not None:
@@ -224,7 +224,6 @@ class SPSA():
         while self.J[-1] > self.tol and self.k_grad < self.n_iter :
             # We iterate until we reach a certain estimate or a certain number
             # Of iterations
-        
             self.k_grad+=1
             
             self.update_c()
@@ -412,61 +411,6 @@ class SPSA():
             
             self.J.append(self.cost_func_wrapper(self.Y))
             # We append the last value
-                    
-    def SPSA_accelerating_step_size(self,mult_size):
-        """ A version of SPSA estimation where we compare the angle between
-        two evaluation of the gradient to get the step size of the next modi-
-        fication of the parameters vector. We use a normal gain sequence ak
-        that we multiply by a factor mult_size^cos(theta), where theta designate 
-        the angle between the estimation of the gradient at the last step
-        and this step estimation of the gradient.
-        
-        INPUTS :
-         mult_size : basis for the multiplicative factor mult_size^cos(theta),
-         positive float
-            """
-        
-        self.J.append(self.cost_func_wrapper(self.Y)) 
-        # We start our first estimate
-        
-        while self.J[-1] > self.tol and self.k_grad < self.n_iter :
-            # We iterate until we reach a certain estimate or a certain number
-            # Of iterations
-        
-            self.k_grad+=1
-            
-#            self.update_c()
-            
-            # Gradient estimation
-            grad_k=self.grad()
-            
-            # Adapting step size
-            if self.k_grad==1:
-               # Then we set the factor to one
-               theta=1.
-               print('Ich bin in Accelerating-SPSA !')
-            else :
-                # And here we try and compute it
-                angle=np.dot(grad_k,grad_k_1)/(\
-                np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
-                +np.finfo(np.float).eps) # I regularize with a machine epsilon
-                theta=mult_size**(angle)
-                self.acc*=theta
-                if self.acc > self.max_acc: self.acc=self.max_acc
-
-            self.Y-= np.dot(self.a,grad_k)*self.acc # We call directly the 
-            # gradient estimate in the dot product
-            
-            # Saving the gradient value
-            grad_k_1=grad_k.copy()
-            
-            # Plotting the animation
-            if self.k_grad%self.n_anim==0 : 
-                if self.anim :
-                    self.Anim_func() # Call the function for animation
-            
-            self.J.append(self.cost_func_wrapper(self.Y))
-            # We append the last value
             
     def SPSA_stochastic_direction(self,batch_size):
             """ A version of SPSA estimation where we search the gradient on 
@@ -474,9 +418,7 @@ class SPSA():
             is to break the isotropy of SPSA and make it able to solve not so 
             well conditioned problems. We tried it with one-sided SPSA however
             it did not seem to work great.
-            
 
-        
             INPUTS:
             batch_size : Number of parameters taken for each direction"""
         
@@ -561,6 +503,73 @@ class SPSA():
                 self.Y-=np.dot(self.a,grad_k)*float(self.vec_size)/\
                     float(batch_size) # We call directly the 
                 # gradient estimate in the dot product
+                
+                # Plotting the animation
+                if self.k_grad%self.n_anim==0 : 
+                    if self.anim :
+                        self.Anim_func() # Call the function for animation
+                
+                self.J.append(self.cost_func_wrapper(self.Y))
+                # We append the last value
+                
+    def SPSA_stochastic_RMS_prop(self,batch_size,mom_coeff=0.5):
+            """ A version of SPSA estimation where we search the gradient on 
+            subspace and add it to the previously obtained gradients. The goal 
+            is to break the isotropy of SPSA and make it able to solve not so 
+            well conditionned problems.
+            
+            Here we introduce a RMS prop formulation for computing the hessian,
+            hoping that this will allow us to adapt the step size automatically
+            and solve badly conditionned problems.
+        
+            INPUTS:
+            batch_size : Number of parameters taken for each direction
+            mom_coeff : Weight of the last gradient estimate in the averaging 
+            process."""
+        
+            self.J.append(self.cost_func_wrapper(self.Y)) 
+            # We start our first estimate
+            self.a*=10.
+#            self.c*=10.
+            
+            while self.J[-1] > self.tol and self.k_grad < self.n_iter :
+                # We iterate until we reach a certain estimate or a 
+                # Certain number of iterations
+            
+                self.k_grad+=1                    # And here we try and compute it
+                
+                self.update_c()
+                self.update_a() # We update our gain variables
+                self.update_dir_mat(batch_size) # We update the stochastic
+                # Gradient estimation
+                
+                if self.k_grad==1:
+                    # First estimation of gradient. No momentum term here
+                    grad_k=self.grad()
+                    print('Ach, ich bin in SPSA mit stochastic direction und RMS prop')
+                    v=np.ones(grad_k.size) # We initialize our hessian inverse
+                    
+                    grad_estim=grad_k.copy()
+                else :
+                    self.dir_mat*=inv_v
+                    # Computing the gradient
+                    grad_k=self.grad()
+                    # Here we approximate the hessian using a local quadratic
+                    # Approximation and a momentum formulation for the hessian
+                    v=mom_coeff*v.copy()+(1.-mom_coeff)*(grad_k**2) # We take the 
+                    # square power of each component
+                    grad_estim=mom_coeff*grad_estim.copy()+(1.-mom_coeff)*grad_k
+                
+                # However, we need the invert of v in computations. And it gonna
+                # filled with 0's. So we have to use some trick
+                inv_v=[]
+                for n in v:
+                    if n > 0.:
+                        inv_v.append(np.sqrt(1./n))
+                    else :
+                        inv_v.append(0.)
+                # And now that we have filled it
+                self.Y-=np.dot(self.a,grad_estim)*inv_v
                 
                 # Plotting the animation
                 if self.k_grad%self.n_anim==0 : 
