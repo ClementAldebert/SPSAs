@@ -21,6 +21,8 @@ Created on Thu Jul 12 14:29:55 2018
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import scipy.linalg
+
 
 class SPSA():
     
@@ -82,10 +84,7 @@ class SPSA():
         self.save_Y=save_Y # To determine if we save the vectors of parameters
         self.n_Y=n_Y # The frequency to save this vector
         self.Y_his=self.Y.copy() # An empty list to save the parameters vectors
-        
-        self.acc=1  # acceleration factor (product of thetas in accelerating method)
-        self.max_acc=5 # facteur maximal d'acceleration        
-        
+
         
     #################################################################
     #           FUNCTIONS USED FOR THE SPSA                         #
@@ -449,7 +448,7 @@ class SPSA():
             self.J.append(self.cost_func_wrapper(self.Y))
             # We append the last value
 
-    def SPSA_accelerating_step_size(self,mult_size):
+    def SPSA_accelerating_step_size(self,mult_size,max_acc=5,min_acc=0.1):
         """ A version of SPSA estimation where we compare the angle between
         two evaluation of the gradient to get the step size of the next modi-
         fication of the parameters vector. We use a normal gain sequence ak
@@ -464,6 +463,9 @@ class SPSA():
         
         self.J.append(self.cost_func_wrapper(self.Y)) 
         # We start our first estimate
+        
+        acc=1  # acceleration factor (product of thetas in accelerating method)
+        
         
         while self.J[-1] > self.tol and self.k_grad < self.n_iter :
             # We iterate until we reach a certain estimate or a certain number
@@ -487,11 +489,14 @@ class SPSA():
                 np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
                 +np.finfo(np.float).eps) # I regularize with a machine epsilon
                 theta=mult_size**(angle)
-                self.acc*=theta
-                if self.acc > self.max_acc: self.acc=self.max_acc
+                acc*=theta
+                if acc > max_acc: acc=max_acc
+                if acc < min_acc: acc=min_acc
 
-            self.Y-= np.dot(self.a,grad_k)*self.acc # We call directly the 
+            self.Y-= np.dot(self.a,grad_k)*acc/scipy.linalg.norm(grad_k) # We call directly the 
             # gradient estimate in the dot product
+    # attempt: divide by gradient norm, so a becomes the real step size !            
+            
             
             # Saving the gradient value
             grad_k_1=grad_k.copy()

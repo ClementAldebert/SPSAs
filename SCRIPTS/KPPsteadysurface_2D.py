@@ -12,14 +12,13 @@ Created on Thu Jul 12 10:49:16 2018
 # The way they move                           #
 ###############################################
 
-plt.close('all')
-
 #*************Packages import******************#
 #*******The package import******************#
+import matplotlib.pyplot as plt
+plt.close('all')
 import sys
 import os
 sys.path.append('../SPSA_lib') # For SPSA libraries
-
 import numpy as np
 import Object_SPSA_Modified_version_12_07 as SPSA # Object for the SPSA
 import matplotlib.pyplot as plt
@@ -46,7 +45,7 @@ def Cost_func(theta) :
     # difference between results
     y = np.subtract(u_ref,u)
     # return sum of square of errors
-    return scipy.linalg.norm(y)    
+    return scipy.linalg.norm(y)/u_ref.size
 
 
 def Cost_func_2D(x,y) :
@@ -71,17 +70,18 @@ def Cost_func_2D(x,y) :
     # difference between results
     y = np.subtract(u_ref,u)
     # return sum of square of errors
-    return scipy.linalg.norm(y)   
+    return scipy.linalg.norm(y)/u_ref.size
     
 
 
 #************Declaration of variables**********#
 #************For the SPSA**********************#
 # Random init for KPP
-Init_point=np.ones(2)
+#Init_point=np.ones(2)
+Init_point=np.array([random.random() for p in range(2)])
 # So that all methods start at the same point
-args={'Y': Init_point,'cost_func':Cost_func,'tol':1e-8,'n_iter':100,
-      'gamma':0.101,'alpha':0.602,'A':10,'comp':False,'anim':False
+args={'Y': Init_point,'cost_func':Cost_func,'tol':1e-4,'n_iter':1000,
+      'gamma':0.101,'alpha':0.602,'A':500,'comp':False,'anim':False
       ,'save_Y':True,'n_Y':20 } 
 
 
@@ -89,35 +89,45 @@ Test_SPSA=SPSA.SPSA(**args) # We initialize it
 
 # Dictionnaries for looping on the different SPSA's
 
-List_SPSA=['SPSA vanilla','SPSA one-sided','SPSA mean','SPSA momentum',
-           'SPSA adaptative step',
-           'SPSA accelerating step',
-           'SPSA stochastic directions',
-           'SPSA stochastic directions with momentum',
-           'SPSA stochastic directions with RMS hessian']
-SPSA_methods={'SPSA vanilla':Test_SPSA.SPSA_vanilla,
-              'SPSA one-sided':Test_SPSA.SPSA_one_sided,
-                'SPSA mean':Test_SPSA.SPSA_mean,
-                'SPSA momentum':Test_SPSA.SPSA_momentum,
-                'SPSA adaptative step':Test_SPSA.SPSA_adaptative_step_size,
-                'SPSA accelerating step':Test_SPSA.SPSA_accelerating_step_size,
-                'SPSA stochastic directions':Test_SPSA.SPSA_stochastic_direction,
-                'SPSA stochastic directions with momentum':Test_SPSA.SPSA_stochastic_direction_momentum,
-                'SPSA stochastic directions with RMS hessian':Test_SPSA.SPSA_stochastic_RMS_prop}
+#List_SPSA=['SPSA vanilla','SPSA one-sided','SPSA mean','SPSA momentum',
+#           'SPSA adaptative step',
+#           'SPSA accelerating step',
+#           'SPSA stochastic directions',
+#           'SPSA stochastic directions with momentum',
+#           'SPSA stochastic directions with RMS hessian']
+#SPSA_methods={'SPSA vanilla':Test_SPSA.SPSA_vanilla,
+#              'SPSA one-sided':Test_SPSA.SPSA_one_sided,
+#                'SPSA mean':Test_SPSA.SPSA_mean,
+#                'SPSA momentum':Test_SPSA.SPSA_momentum,
+#                'SPSA adaptative step':Test_SPSA.SPSA_adaptative_step_size,
+#                'SPSA accelerating step':Test_SPSA.SPSA_accelerating_step_size,
+#                'SPSA stochastic directions':Test_SPSA.SPSA_stochastic_direction,
+#                'SPSA stochastic directions with momentum':Test_SPSA.SPSA_stochastic_direction_momentum,
+#                'SPSA stochastic directions with RMS hessian':Test_SPSA.SPSA_stochastic_RMS_prop}
+#
+#SPSA_arg={'SPSA vanilla':None,'SPSA one-sided':None,'SPSA mean':{'n_mean':2},
+#                'SPSA momentum':None,'SPSA adaptative step':{'mult_size':2.},
+#                'SPSA accelerating step':{'mult_size':2.},
+#                'SPSA stochastic directions':{'batch_size':1},
+#                'SPSA stochastic directions with momentum':{'batch_size':1},
+#                'SPSA stochastic directions with RMS hessian':
+#                    {'batch_size':1,'mom_coeff':0.9}}
+#SPSA_markers={'SPSA vanilla':'*','SPSA one-sided':'p','SPSA mean':'o',
+#                'SPSA momentum':'v','SPSA adaptative step':'8',
+#                'SPSA accelerating step':'8',
+#                'SPSA stochastic directions':'x',
+#                'SPSA stochastic directions with momentum':'D',
+#                'SPSA stochastic directions with RMS hessian':'h'}
+                
+# Dictionnaries for looping on the different SPSA's: only accelerating
 
-SPSA_arg={'SPSA vanilla':None,'SPSA one-sided':None,'SPSA mean':{'n_mean':2},
-                'SPSA momentum':None,'SPSA adaptative step':{'mult_size':2.},
-                'SPSA accelerating step':{'mult_size':2.},
-                'SPSA stochastic directions':{'batch_size':1},
-                'SPSA stochastic directions with momentum':{'batch_size':1},
-                'SPSA stochastic directions with RMS hessian':
-                    {'batch_size':1,'mom_coeff':0.9}}
-SPSA_markers={'SPSA vanilla':'*','SPSA one-sided':'p','SPSA mean':'o',
-                'SPSA momentum':'v','SPSA adaptative step':'8',
-                'SPSA accelerating step':'8',
-                'SPSA stochastic directions':'x',
-                'SPSA stochastic directions with momentum':'D',
-                'SPSA stochastic directions with RMS hessian':'h'}
+List_SPSA=['SPSA accelerating step']
+SPSA_methods={'SPSA accelerating step':Test_SPSA.SPSA_accelerating_step_size}
+
+SPSA_arg={'SPSA accelerating step':{'mult_size':2}}
+SPSA_markers={'SPSA accelerating step':'8'}                
+                
+                
 # Here we store the arguments for the various SPSA, we do not use dictionnary
 # In dictionnary yet. But it may become useful
     
@@ -132,8 +142,8 @@ for ln in List_SPSA:
     Test_SPSA.__init__(**args)
     # Setting gain parameters
     # Parameters for KPP
-    Test_SPSA.c*=1e-5
-    Test_SPSA.a*=1e-3
+    Test_SPSA.c*=1e-4
+    Test_SPSA.a*=1e-2
 
 
     
