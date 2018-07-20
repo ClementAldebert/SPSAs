@@ -77,12 +77,12 @@ def Cost_func_2D(x,y) :
 #************Declaration of variables**********#
 #************For the SPSA**********************#
 # Random init for KPP
-#Init_point=np.ones(2)
-Init_point=np.array([random.random() for p in range(2)])
+Init_point=np.ones(2)
+#Init_point=np.array([random.random() for p in range(2)])
 # So that all methods start at the same point
-args={'Y': Init_point,'cost_func':Cost_func,'tol':1e-4,'n_iter':1000,
+args={'Y': Init_point,'cost_func':Cost_func,'tol':1e-4,'n_iter':20000,
       'gamma':0.101,'alpha':0.602,'A':500,'comp':False,'anim':False
-      ,'save_Y':True,'n_Y':20 } 
+      ,'save_Y':True,'n_Y':1 } 
 
 
 Test_SPSA=SPSA.SPSA(**args) # We initialize it
@@ -119,13 +119,27 @@ Test_SPSA=SPSA.SPSA(**args) # We initialize it
 #                'SPSA stochastic directions with momentum':'D',
 #                'SPSA stochastic directions with RMS hessian':'h'}
                 
-# Dictionnaries for looping on the different SPSA's: only accelerating
+# Dictionnaries for looping on the different SPSA's: only accelerating versions
+# reference parameters for all methods:
+min_acc=0.01
+max_acc=5
+mom_coeff=.9
+n_mean=2
+mult_size=2
 
-List_SPSA=['SPSA accelerating step']
-SPSA_methods={'SPSA accelerating step':Test_SPSA.SPSA_accelerating_step_size}
+List_SPSA=['SPSA accelerating step','SPSA accelerating step momentum',
+           'mean SPSA accelerating step','mean SPSA accelerating step momentum']
+SPSA_methods={'SPSA accelerating step':Test_SPSA.SPSA_accelerating_step_size,
+              'SPSA accelerating step momentum':Test_SPSA.SPSA_accelerating_step_size_momentum,
+              'mean SPSA accelerating step':Test_SPSA.SPSA_mean_accelerating_step_size,
+              'mean SPSA accelerating step momentum':Test_SPSA.SPSA_mean_accelerating_step_size_momentum}
 
-SPSA_arg={'SPSA accelerating step':{'mult_size':2}}
-SPSA_markers={'SPSA accelerating step':'8'}                
+SPSA_arg={'SPSA accelerating step':{'mult_size':mult_size,'max_acc':max_acc,'min_acc':min_acc},
+          'SPSA accelerating step momentum':{'mult_size':mult_size,'mom_coeff':mom_coeff,'max_acc':max_acc,'min_acc':min_acc},
+            'mean SPSA accelerating step':{'n_mean':n_mean,'mult_size':mult_size,'max_acc':max_acc,'min_acc':min_acc},
+            'mean SPSA accelerating step momentum':{'n_mean':n_mean,'mult_size':mult_size,'mom_coeff':mom_coeff,'max_acc':max_acc,'min_acc':min_acc}}
+SPSA_markers={'SPSA accelerating step':'8','SPSA accelerating step momentum':'8',
+              'mean SPSA accelerating step':'o','mean SPSA accelerating step momentum':'v'}                
                 
                 
 # Here we store the arguments for the various SPSA, we do not use dictionnary
@@ -142,7 +156,7 @@ for ln in List_SPSA:
     Test_SPSA.__init__(**args)
     # Setting gain parameters
     # Parameters for KPP
-    Test_SPSA.c*=1e-4
+    Test_SPSA.c*=1e-6
     Test_SPSA.a*=1e-2
 
 
@@ -209,8 +223,8 @@ for ln in List_SPSA:
     ctr+=1 # Incrementing the counter
 
 # Legend for the map
-ax_dir.scatter(SPSA_Y_values['SPSA vanilla'][0,0],
-    SPSA_Y_values['SPSA vanilla'][0,1],marker='o',color='red',
+ax_dir.scatter(SPSA_Y_values['SPSA accelerating step'][0,0],
+    SPSA_Y_values['SPSA accelerating step'][0,1],marker='o',color='red',
     s=400,label='Starting point')
 ax_dir.legend(loc='best')
 

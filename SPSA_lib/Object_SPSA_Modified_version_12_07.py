@@ -448,7 +448,7 @@ class SPSA():
             self.J.append(self.cost_func_wrapper(self.Y))
             # We append the last value
 
-    def SPSA_accelerating_step_size(self,mult_size,max_acc=5,min_acc=0.1):
+    def SPSA_accelerating_step_size(self,mult_size,max_acc=5,min_acc=0.01):
         """ A version of SPSA estimation where we compare the angle between
         two evaluation of the gradient to get the step size of the next modi-
         fication of the parameters vector. We use a normal gain sequence ak
@@ -513,8 +513,226 @@ class SPSA():
             
             self.J.append(self.cost_func_wrapper(self.Y))
             # We append the last value
+
+
+    def SPSA_mean_accelerating_step_size(self,n_mean,mult_size,max_acc=5,min_acc=0.01):
+        """ A version of SPSA estimation where we compare the angle between
+        two evaluation of the gradient to get the step size of the next modi-
+        fication of the parameters vector. We use a normal gain sequence ak
+        that we multiply by a factor mult_size^cos(theta), where theta designate 
+        the angle between the estimation of the gradient at the last step
+        and this step estimation of the gradient.
+        
+        INPUTS :
+         mult_size : basis for the multiplicative factor mult_size^cos(theta),
+         positive float
+            """
+        
+        self.J.append(self.cost_func_wrapper(self.Y)) 
+        # We start our first estimate
+        
+        acc=1  # acceleration factor (product of thetas in accelerating method)
+        
+        
+        while self.J[-1] > self.tol and self.k_grad < self.n_iter :
+            # We iterate until we reach a certain estimate or a certain number
+            # Of iterations
+        
+            self.k_grad+=1
+            
+#            self.update_c()
+            
+            # Gradient estimation (from mean SPSA method)
+            for i in range(n_mean):
+                if i==0:
+                    grad_k=self.grad()
+                else :
+                    grad_k+=self.grad()
+                    
+            grad_k/=n_mean
+            
+            # Adapting step size
+            if self.k_grad==1:
+               # Then we set the factor to one
+               theta=1.
+               print('Ich bin in Accelerating-SPSA !')
+            else :
+                # And here we try and compute it
+                angle=np.dot(grad_k,grad_k_1)/(\
+                np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
+                +np.finfo(np.float).eps) # I regularize with a machine epsilon
+                theta=mult_size**(angle)
+                acc*=theta
+                if acc > max_acc: acc=max_acc
+                if acc < min_acc: acc=min_acc
+
+            self.Y-= np.dot(self.a,grad_k)*acc/scipy.linalg.norm(grad_k) # We call directly the 
+            # gradient estimate in the dot product
+    # attempt: divide by gradient norm, so a becomes the real step size !            
             
             
+            # Saving the gradient value
+            grad_k_1=grad_k.copy()
+            
+            # Plotting the animation
+            if self.anim :
+                if self.k_grad%self.n_anim==0 : 
+                    self.Anim_func() # Call the function for animation
+
+            # Saving the data
+            if self.save_Y :
+                if self.k_grad%self.n_Y==0 :
+                    self.Y_his=np.vstack([self.Y_his,self.Y])
+            
+            self.J.append(self.cost_func_wrapper(self.Y))
+            # We append the last value
+
+
+            
+            
+    def SPSA_accelerating_step_size_momentum(self,mult_size,max_acc=5,min_acc=0.01,mom_coeff=.9):
+        """ A version of SPSA estimation where we compare the angle between
+        two evaluation of the gradient to get the step size of the next modi-
+        fication of the parameters vector. We use a normal gain sequence ak
+        that we multiply by a factor mult_size^cos(theta), where theta designate 
+        the angle between the estimation of the gradient at the last step
+        and this step estimation of the gradient.
+        
+        INPUTS :
+         mult_size : basis for the multiplicative factor mult_size^cos(theta),
+         positive float
+            """
+        
+        self.J.append(self.cost_func_wrapper(self.Y)) 
+        # We start our first estimate
+        
+        acc=1  # acceleration factor (product of thetas in accelerating method)
+        
+        
+        while self.J[-1] > self.tol and self.k_grad < self.n_iter :
+            # We iterate until we reach a certain estimate or a certain number
+            # Of iterations
+        
+            self.k_grad+=1
+            
+#            self.update_c()
+            
+            # Gradient estimation
+            grad_k=self.grad()
+            
+            # Adapting step size
+            if self.k_grad==1:
+               # Then we set the factor to one
+               theta=1.
+               print('Ich bin in Accelerating-SPSA !')
+            else :
+                # And here we try and compute it
+                angle=np.dot(grad_k,grad_k_1)/(\
+                np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
+                +np.finfo(np.float).eps) # I regularize with a machine epsilon
+                theta=mult_size**(angle)
+                acc*=theta
+                if acc > max_acc: acc=max_acc
+                if acc < min_acc: acc=min_acc
+                grad_k=(grad_k+mom_coeff*grad_k_1)/(1.+mom_coeff)    # add a momentum
+
+            self.Y-= np.dot(self.a,grad_k)*acc/scipy.linalg.norm(grad_k) # We call directly the 
+            # gradient estimate in the dot product
+    # attempt: divide by gradient norm, so a becomes the real step size !            
+            
+            
+            # Saving the gradient value
+            grad_k_1=grad_k.copy()
+            
+            # Plotting the animation
+            if self.anim :
+                if self.k_grad%self.n_anim==0 : 
+                    self.Anim_func() # Call the function for animation
+
+            # Saving the data
+            if self.save_Y :
+                if self.k_grad%self.n_Y==0 :
+                    self.Y_his=np.vstack([self.Y_his,self.Y])
+            
+            self.J.append(self.cost_func_wrapper(self.Y))
+            # We append the last value
+
+
+
+    def SPSA_mean_accelerating_step_size_momentum(self,n_mean,mult_size,max_acc=5,min_acc=0.01,mom_coeff=.9):
+        """ A version of SPSA estimation where we compare the angle between
+        two evaluation of the gradient to get the step size of the next modi-
+        fication of the parameters vector. We use a normal gain sequence ak
+        that we multiply by a factor mult_size^cos(theta), where theta designate 
+        the angle between the estimation of the gradient at the last step
+        and this step estimation of the gradient.
+        
+        INPUTS :
+         mult_size : basis for the multiplicative factor mult_size^cos(theta),
+         positive float
+            """
+        
+        self.J.append(self.cost_func_wrapper(self.Y)) 
+        # We start our first estimate
+        
+        acc=1  # acceleration factor (product of thetas in accelerating method)
+        
+        
+        while self.J[-1] > self.tol and self.k_grad < self.n_iter :
+            # We iterate until we reach a certain estimate or a certain number
+            # Of iterations
+        
+            self.k_grad+=1
+            
+#            self.update_c()
+            
+            # Gradient estimation (from mean SPSA method)
+            for i in range(n_mean):
+                if i==0:
+                    grad_k=self.grad()
+                else :
+                    grad_k+=self.grad()
+                    
+            grad_k/=n_mean
+            
+            # Adapting step size
+            if self.k_grad==1:
+               # Then we set the factor to one
+               theta=1.
+               print('Ich bin in Accelerating-SPSA !')
+            else :
+                # And here we try and compute it
+                angle=np.dot(grad_k,grad_k_1)/(\
+                np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
+                +np.finfo(np.float).eps) # I regularize with a machine epsilon
+                theta=mult_size**(angle)
+                acc*=theta
+                if acc > max_acc: acc=max_acc
+                if acc < min_acc: acc=min_acc
+                grad_k=(grad_k+mom_coeff*grad_k_1)/(1.+mom_coeff)    # add a momentum
+
+
+            self.Y-= np.dot(self.a,grad_k)*acc/scipy.linalg.norm(grad_k) # We call directly the 
+            # gradient estimate in the dot product
+    # attempt: divide by gradient norm, so a becomes the real step size !            
+            
+            
+            # Saving the gradient value
+            grad_k_1=grad_k.copy()
+            
+            # Plotting the animation
+            if self.anim :
+                if self.k_grad%self.n_anim==0 : 
+                    self.Anim_func() # Call the function for animation
+
+            # Saving the data
+            if self.save_Y :
+                if self.k_grad%self.n_Y==0 :
+                    self.Y_his=np.vstack([self.Y_his,self.Y])
+            
+            self.J.append(self.cost_func_wrapper(self.Y))
+            # We append the last value
+
             
             
     def SPSA_stochastic_direction(self,batch_size):
