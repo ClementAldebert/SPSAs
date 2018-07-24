@@ -3,3 +3,7 @@ Hello !
 Ici on stocke la dernière version de la librairie SPSA qui a été validée. Ca sert de jalon.
 
 Dernière mise à jour : le 10/07/2018 -> Ajout de fonctions avec directions stochastiques fonctionnelles. Correction de l'estimation de gradient et de gradient avec direction stochastique et aussi modification de la nature complexe de certains paramètres, afin d'éviter de devoir utiliser des vecteurs de variables complexes quand ça n'est pas nécessaire.
+
+                        le 12/07/2018 -> Correction d'une erreur dans l'estimation du gradient de la SPSA. Ajout de variable pour permettre l'enregistrement des données du vecteur de paramètres durant le fonctionnement de la routine SPSA.Ajout d'une SPSA accélérée.
+
+                        le 24/07/2018 -> Modification de la SPSA avec direction stochastique et momentum, afin d'obtenir une accélération. Implémentation de limitation sur la taille du domaine.
