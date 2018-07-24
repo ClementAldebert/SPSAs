@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jul  6 17:56:08 2018
+Created on Thu Jul 19 14:28:28 2018
 
 @author: koenig.g
 """
@@ -14,7 +14,16 @@ Created on Fri Jul  6 17:56:08 2018
 # Added some variables to save vectors of par-#
 # meters across iterations and introduction of#
 # Accelerating SPSA , the 12/07/2018, by C.   #
-# Aldebert and G.Koenig                       # 
+# Aldebert and G.Koenig                       # 
+# Modification of the momentum term with sto- #
+# Chastic direction following an article about#
+# SGD with Momentum. By G.Koenig, the         #
+# 19/07/2018                                  #
+# Modified the Momentum SPSA the 20/07/2018   #
+# So that the momentum is not normalized any- #
+# More normalized                             #
+# Modified the 24/07/2018 to add optionnal    #
+# Boundary limitations                        #
 ###############################################
 
 
@@ -26,7 +35,7 @@ import matplotlib.pyplot as plt
 class SPSA():
     
     def __init__(self,Y,cost_func,tol,n_iter,gamma,alpha,A,comp=False,
-                 anim=False,n_anim=100,save_Y=False,n_Y=100):
+                 anim=False,n_anim=100,save_Y=False,n_Y=100,bc=None):
         """ Declaration of the main variables.
         
         INPUTS :
@@ -41,7 +50,8 @@ class SPSA():
         the evolution of the parameter vector, and the frequency at which this
         plot is refreshed
         save_Y : Flag to determine saving or no of the parameter vector between
-        iterations, and the frequency at which we save it"""
+        iterations, and the frequency at which we save it
+        bc : Matrix of boundary conditions, must be of shape (2,n)"""
         
         self.k_grad=0 # Number of estimates of the gradient
         self.k_costfun=0 # Number of calls for the model/cost_function
@@ -84,8 +94,11 @@ class SPSA():
         self.Y_his=self.Y.copy() # An empty list to save the parameters vectors
         # Storing the vector of parameters
         
-        self.acc=1  # acceleration factor (product of thetas in accelerating method)
-        self.max_acc=5 # facteur maximal d'acceleration
+        self.acc=1  # Acceleration factor (product of thetas in accelerating method)
+        self.max_acc=5 #Maximal acceleration factor
+        
+        self.boundaries=bc # Setting the boundary conditions
+        
 
     #################################################################
     #           FUNCTIONS USED FOR THE SPSA                         #
@@ -166,13 +179,13 @@ class SPSA():
             Y_plus=self.Y+self.dir_mat*delta_k
             Y_minus=self.Y-self.dir_mat*delta_k
 
-            grad_estim=(self.cost_func_wrapper(Y_plus)-\
-                self.cost_func_wrapper(Y_minus))/(2.*delta_k)
-                    # Estimation of the gradient
+        grad_estim=(self.cost_func_wrapper(Y_plus)-\
+            self.cost_func_wrapper(Y_minus))/(2.*delta_k)
+        # Estimation of the gradient
         
         if self.dir_mat is not None:
             # Correction for the directions that we want
-            grad_estim=self.dir_mat*grad_estim # We take advantage 
+            grad_estim=self.dir_mat*grad_estim 
         
         return grad_estim
     
@@ -184,7 +197,7 @@ class SPSA():
         Y_plus,Y_minus,delta_k=self.perturb_vector() # Getting the perturbed
         # vectors
         
-        if self.dir_mat: # If A is not null
+        if self.dir_mat is not None: # If A is not null
             # Modifying them to get the direction
             Y_plus=self.dir_mat*Y_plus
         
@@ -244,9 +257,25 @@ class SPSA():
             self.update_c()
             self.update_a() # We update our gain variables
             
-
-            self.Y-= np.dot(self.a,self.grad()) # We call directly the 
-            # gradient estimate in the dot product
+            if self.boundaries is None :
+                self.Y-= np.dot(self.a,self.grad()) # We call directly the 
+                # gradient estimate in the dot product
+                self.J.append(self.cost_func_wrapper(self.Y))
+                # We append the last value
+            
+            else :
+                Y_temp=self.Y-np.dot(self.a,self.grad())
+                
+                if (Y_temp<self.boundaries[0,:]).any() or \
+                    (Y_temp>self.boundaries[1,:]).any()  :
+                    # We check wheter any of the value it outside of bounds
+                    self.J.append(self.J[-1]) # There is no need to update
+                    # The vector of parameters or to compute its cost function 
+                    # Again
+                else :
+                    # If nothing, we proceed normally
+                    self.Y=Y_temp.copy()
+                    self.J.append(self.cost_func_wrapper(self.Y))
             
             # Plotting the animation
             if self.anim :
@@ -257,8 +286,7 @@ class SPSA():
             if self.save_Y :
                 if self.k_grad%self.n_Y==0 :
                     self.Y_his=np.vstack([self.Y_his,self.Y])
-            self.J.append(self.cost_func_wrapper(self.Y))
-            # We append the last value
+
             
     def SPSA_one_sided(self):
         """The basic version of SPSA with a one-sided estimation """
@@ -277,8 +305,25 @@ class SPSA():
             self.update_c()
             self.update_a() # Updating the gain variables
             
-            self.Y-=np.dot(self.a,self.grad_one_sided()) #  We call directly
-            # the gradient estimate
+            if self.boundaries is None :
+                self.Y-= np.dot(self.a,self.grad_one_sided())# We call directly the 
+                # gradient estimate in the dot product
+                self.J.append(self.cost_func_wrapper(self.Y))
+                # We append the last value
+            
+            else :
+                Y_temp=self.Y-np.dot(self.a,self.grad_one_sided())
+                
+                if (Y_temp<self.boundaries[0,:]).any() or \
+                    (Y_temp>self.boundaries[1,:]).any()  :
+                    # We check wheter any of the value it outside of bounds
+                    self.J.append(self.J[-1]) # There is no need to update
+                    # The vector of parameters or to compute its cost function 
+                    # Again
+                else :
+                    # If nothing, we proceed normally
+                    self.Y=Y_temp.copy()
+                    self.J.append(self.cost_func_wrapper(self.Y))
             
             # Plotting the animation
             if self.anim :
@@ -289,10 +334,7 @@ class SPSA():
             if self.save_Y :
                 if self.k_grad%self.n_Y==0 :
                     self.Y_his=np.vstack([self.Y_his,self.Y])
-                   
-            self.J.append(self.cost_func_wrapper(self.Y)) #Appending the cost
-            # Function
-            
+
             
     def SPSA_mean(self,n_mean):
         """ A version of SPSA estimation where you take n_estimation of
@@ -323,9 +365,26 @@ class SPSA():
                     
             grad_estim/=n_mean
             
-            # Updating the vector of parameters
-            self.Y-= np.dot(self.a,grad_estim)
+
+
+            if self.boundaries is None :
+                self.Y-= np.dot(self.a,grad_estim)
+                self.J.append(self.cost_func_wrapper(self.Y))
             
+            else :
+                Y_temp=self.Y-np.dot(self.a,grad_estim)
+                
+                if (Y_temp<self.boundaries[0,:]).any() or \
+                    (Y_temp>self.boundaries[1,:]).any()  :
+                    # We check wheter any of the value it outside of bounds
+                    self.J.append(self.J[-1]) # There is no need to update
+                    # The vector of parameters or to compute its cost function 
+                    # Again
+                else :
+                    # If nothing, we proceed normally
+                    self.Y=Y_temp.copy()
+                    self.J.append(self.cost_func_wrapper(self.Y))
+
             # Plotting the animation
             if self.anim :
                 if self.k_grad%self.n_anim==0 : 
@@ -336,8 +395,7 @@ class SPSA():
                 if self.k_grad%self.n_Y==0 :
                     self.Y_his=np.vstack([self.Y_his,self.Y])
            
-            self.J.append(self.cost_func_wrapper(self.Y))
-            # We append the last value
+
             
     def SPSA_momentum(self,mom_coeff=0.9):
         """ A version of SPSA estimation where you try to consider the last
@@ -367,15 +425,31 @@ class SPSA():
             
             if self.k_grad==1:
                 # First estimation of gradient. No momentum term here
-                grad_k=self.grad()
+                grad_estim=self.grad()
                 print('Ach,Ich bin in SPSA mit momentum')
             else :
                 # Or here we take a momentum formulation
-                grad_k=(self.grad()+mom_coeff*grad_k)/(1.+mom_coeff)
+                grad_estim=self.grad()+mom_coeff*grad_estim
             
+            if self.boundaries is None :
+                self.Y-= np.dot(self.a,grad_estim)
+                self.J.append(self.cost_func_wrapper(self.Y))
             
-            self.Y-= np.dot(self.a,grad_k) # We call directly the 
-            # gradient estimate in the dot product
+            else :
+                Y_temp=self.Y-np.dot(self.a,grad_estim)
+                
+                if (Y_temp<self.boundaries[0,:]).any() or \
+                    (Y_temp>self.boundaries[1,:]).any()  :
+                    # We check wheter any of the value it outside of bounds
+                    self.J.append(self.J[-1]) # There is no need to update
+                    # The vector of parameters or to compute its cost function 
+                    # Again
+                else :
+                    # If nothing, we proceed normally
+                    self.Y=Y_temp.copy()
+                    self.J.append(self.cost_func_wrapper(self.Y))
+
+            
             
             # Plotting the animation
             if self.anim :
@@ -387,8 +461,6 @@ class SPSA():
                 if self.k_grad%self.n_Y==0 :
                     self.Y_his=np.vstack([self.Y_his,self.Y])
             
-            self.J.append(self.cost_func_wrapper(self.Y))
-            # We append the last value
             
     def SPSA_adaptative_step_size(self,mult_size):
         """ A version of SPSA estimation where we compare the angle between
@@ -418,7 +490,7 @@ class SPSA():
             self.update_c()
             
             # Gradient estimation
-            grad_k=self.grad()
+            grad_estim=self.grad()
             
             # Adapting step size
             if self.k_grad==1:
@@ -427,16 +499,30 @@ class SPSA():
                print('Ich bin in Adaptatiev-SPSA !')
             else :
                 # And here we try and compute it
-                angle=np.dot(grad_k,grad_k_1)/(\
-                np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
+                angle=np.dot(grad_estim,grad_k_1)/(\
+                np.sqrt(np.dot(grad_estim,grad_estim)*np.dot(grad_k_1,grad_k_1)) \
                 +np.finfo(np.float).eps) # I regularize with a machine epsilon
                 theta=mult_size**(angle)
 
-            self.Y-= np.dot(self.a,grad_k)*theta # We call directly the 
-            # gradient estimate in the dot product
             
-            # Saving the gradient value
-            grad_k_1=grad_k.copy()
+            if self.boundaries is None :
+                self.Y-= np.dot(self.a,grad_estim)*theta
+                self.J.append(self.cost_func_wrapper(self.Y))
+                grad_k_1=grad_estim.copy()
+            else :
+                Y_temp=self.Y-np.dot(self.a,grad_estim)*theta
+                
+                if (Y_temp<self.boundaries[0,:]).any() or \
+                    (Y_temp>self.boundaries[1,:]).any()  :
+                    # We check wheter any of the value it outside of bounds
+                    self.J.append(self.J[-1]) # There is no need to update
+                    # The vector of parameters or to compute its cost function 
+                    # Again
+                else :
+                    # If nothing, we proceed normally
+                    self.Y=Y_temp.copy()
+                    self.J.append(self.cost_func_wrapper(self.Y))
+                    grad_k_1=grad_estim.copy()
             
             # Plotting the animation
             if self.anim :
@@ -448,8 +534,6 @@ class SPSA():
                 if self.k_grad%self.n_Y==0 :
                     self.Y_his=np.vstack([self.Y_his,self.Y])
             
-            self.J.append(self.cost_func_wrapper(self.Y))
-            # We append the last value
                     
     def SPSA_accelerating_step_size(self,mult_size):
         """ A version of SPSA estimation where we compare the angle between
@@ -476,7 +560,7 @@ class SPSA():
 #            self.update_c()
             
             # Gradient estimation
-            grad_k=self.grad()
+            grad_estim=self.grad()
             
             # Adapting step size
             if self.k_grad==1:
@@ -485,18 +569,32 @@ class SPSA():
                print('Ich bin in Accelerating-SPSA !')
             else :
                 # And here we try and compute it
-                angle=np.dot(grad_k,grad_k_1)/(\
-                np.sqrt(np.dot(grad_k,grad_k)*np.dot(grad_k_1,grad_k_1)) \
+                angle=np.dot(grad_estim,grad_k_1)/(\
+                np.sqrt(np.dot(grad_estim,grad_estim)*np.dot(grad_k_1,grad_k_1)) \
                 +np.finfo(np.float).eps) # I regularize with a machine epsilon
                 theta=mult_size**(angle)
                 self.acc*=theta
                 if self.acc > self.max_acc: self.acc=self.max_acc
-
-            self.Y-= np.dot(self.a,grad_k)*self.acc # We call directly the 
-            # gradient estimate in the dot product
             
-            # Saving the gradient value
-            grad_k_1=grad_k.copy()
+            if self.boundaries is None :
+                self.Y-= np.dot(self.a,grad_estim)*theta
+                self.J.append(self.cost_func_wrapper(self.Y))
+                grad_k_1=grad_estim.copy()
+            else :
+                Y_temp=self.Y-np.dot(self.a,grad_estim)*theta
+                
+                if (Y_temp<self.boundaries[0,:]).any() or \
+                    (Y_temp>self.boundaries[1,:]).any()  :
+                    # We check wheter any of the value it outside of bounds
+                    self.J.append(self.J[-1]) # There is no need to update
+                    # The vector of parameters or to compute its cost function 
+                    # Again
+                else :
+                    # If nothing, we proceed normally
+                    self.Y=Y_temp.copy()
+                    self.J.append(self.cost_func_wrapper(self.Y))
+                    grad_k_1=grad_estim.copy()
+            
             
             # Plotting the animation
             if self.anim :
@@ -508,8 +606,7 @@ class SPSA():
                 if self.k_grad%self.n_Y==0 :
                     self.Y_his=np.vstack([self.Y_his,self.Y])
             
-            self.J.append(self.cost_func_wrapper(self.Y))
-            # We append the last value
+
             
     def SPSA_stochastic_direction(self,batch_size):
             """ A version of SPSA estimation where we search the gradient on 
@@ -518,8 +615,6 @@ class SPSA():
             well conditioned problems. We tried it with one-sided SPSA however
             it did not seem to work great.
             
-
-        
             INPUTS:
             batch_size : Number of parameters taken for each direction"""
         
@@ -530,7 +625,6 @@ class SPSA():
             while self.J[-1] > self.tol and self.k_grad < self.n_iter :
                 # We iterate until we reach a certain estimate or a certain 
                 # Number of iterations
-            
                 self.k_grad+=1
                 
                 self.update_c()
@@ -538,23 +632,34 @@ class SPSA():
                 self.update_dir_mat(batch_size) # We update the stochastic
                 # Directions matrix
                 
-                self.Y-=np.dot(self.a,self.grad())*float(self.vec_size)/\
-                    float(batch_size)# We call directly the 
-                # gradient estimate in the dot product
+                if self.boundaries is None :
+                    self.Y-=np.dot(self.a,self.grad())*float(self.vec_size)/\
+                        float(batch_size)
+                    self.J.append(self.cost_func_wrapper(self.Y))
+            
+                else :
+                    Y_temp=self.Y-np.dot(self.a,self.grad())*float(self.vec_size)/\
+                    float(batch_size)
                 
-            # Plotting the animation
-            if self.anim :
-                if self.k_grad%self.n_anim==0 : 
-                    self.Anim_func() # Call the function for animation
+                    if (Y_temp<self.boundaries[0,:]).any() or \
+                    (Y_temp>self.boundaries[1,:]).any()  :
+                        self.J.append(self.J[-1]) 
+                    else :
+                    # If nothing, we proceed normally
+                        self.Y=Y_temp.copy()
+                        self.J.append(self.cost_func_wrapper(self.Y))
+            
+                # Plotting the animation
+                if self.anim :
+                    if self.k_grad%self.n_anim==0 : 
+                        self.Anim_func() # Call the function for animation
 
-            # Saving the data
-            if self.save_Y :
-                if self.k_grad%self.n_Y==0 :
-                    self.Y_his=np.vstack([self.Y_his,self.Y])               
-                self.J.append(self.cost_func_wrapper(self.Y))
-                # We append the last value
+                # Saving the data
+                if self.save_Y :
+                    if self.k_grad%self.n_Y==0 :
+                        self.Y_his=np.vstack([self.Y_his,self.Y])
                 
-    def SPSA_stochastic_direction_momentum(self,batch_size,mom_coeff=0.9):
+    def SPSA_stochastic_direction_momentum(self,batch_size,mom_coeff=0.8):
             """ A version of SPSA estimation where we search the gradient on 
             subspace and add it to the previously obtained gradients. The goal 
             is to break the isotropy of SPSA and make it able to solve not so 
@@ -582,41 +687,42 @@ class SPSA():
                 self.update_a() # We update our gain variables
                 self.update_dir_mat(batch_size) # We update the stochastic
                 # Directions matrix
-                
                 # Gradient estimation
                 
                 if self.k_grad==1:
                     # First estimation of gradient. No momentum term here
-                    grad_k=self.grad()
+                    grad_estim=self.grad_one_sided()
                     print('Ach, ich bin in SPSA mit stochastic direction und momentum')
                 else :
-                    # Or here we take a momentum formulation. However, 
-                    # We do not want to artificially get a too low gradient.
-                    # So we introduce a loop formulation. I am pretty
-                    # Sure that there is a more beautiful way to do this with
-                    # Numpy
-                    grad_est=self.grad()
-                    
-                    for i in range(grad_est.size):
-                        if abs(grad_est[i])>0.: # If the direction is non-null
-                            grad_k[i]=(mom_coeff*grad_k[i]+grad_est[i])/\
-                            (1.+mom_coeff)
-                        else :
-                            grad_k[i]=grad_k[i] # We just keep it
-                                            
-                
-                self.Y-=np.dot(self.a,grad_k)*float(self.vec_size)/\
-                    float(batch_size) # We call directly the 
-                # gradient estimate in the dot product
-                
-            # Plotting the animation
-            if self.anim :
-                if self.k_grad%self.n_anim==0 : 
-                    self.Anim_func() # Call the function for animation
+                    # We inspire ourselves of the formulation found on
+                    #https://bl.ocks.org/EmilienDupont/f97a3902f4f3a98f350500a3a00371db
+                    grad_estim=mom_coeff*grad_estim+self.grad_one_sided()#/np.sqrt(float(self.k_grad))+self.grad()
+                # Getting new value                            
 
-            # Saving the data
-            if self.save_Y :
-                if self.k_grad%self.n_Y==0 :
-                    self.Y_his=np.vstack([self.Y_his,self.Y])                 
-                self.J.append(self.cost_func_wrapper(self.Y))
-                # We append the last value
+
+                if self.boundaries is None :
+                    self.Y-=np.dot(self.a,grad_estim)*float(self.vec_size)/float(batch_size) 
+                    self.J.append(self.cost_func_wrapper(self.Y))
+                    grad_k_1=grad_estim.copy()
+                else :
+                    Y_temp=self.Y-np.dot(self.a,grad_estim)*float(self.vec_size)/float(batch_size) 
+                
+                    if (Y_temp<self.boundaries[0,:]).any() or \
+                        (Y_temp>self.boundaries[1,:]).any()  :
+                        self.J.append(self.J[-1])
+
+                    else :
+                    # If nothing, we proceed normally
+                        self.Y=Y_temp.copy()
+                        self.J.append(self.cost_func_wrapper(self.Y))
+                        grad_k_1=grad_estim.copy()
+                # Plotting the animation
+                if self.anim :
+                    if self.k_grad%self.n_anim==0 : 
+                        self.Anim_func() # Call the function for animation
+
+                # Saving the data
+                if self.save_Y :
+                    if self.k_grad%self.n_Y==0 :
+                        self.Y_his=np.vstack([self.Y_his,self.Y])                 
+
