@@ -22,8 +22,6 @@ Created on Thu Jul 19 14:28:28 2018
 # Modified the Momentum SPSA the 20/07/2018   #
 # So that the momentum is not normalized any- #
 # More normalized                             #
-# Modified the 24/07/2018 to add optionnal    #
-# Boundary limitations                        #
 ###############################################
 
 
@@ -518,6 +516,7 @@ class SPSA():
                     self.J.append(self.J[-1]) # There is no need to update
                     # The vector of parameters or to compute its cost function 
                     # Again
+                    grad_k_1=np.zeros(self.vec_size)
                 else :
                     # If nothing, we proceed normally
                     self.Y=Y_temp.copy()
@@ -691,12 +690,12 @@ class SPSA():
                 
                 if self.k_grad==1:
                     # First estimation of gradient. No momentum term here
-                    grad_estim=self.grad_one_sided()
+                    grad_estim=self.grad()
                     print('Ach, ich bin in SPSA mit stochastic direction und momentum')
                 else :
                     # We inspire ourselves of the formulation found on
                     #https://bl.ocks.org/EmilienDupont/f97a3902f4f3a98f350500a3a00371db
-                    grad_estim=mom_coeff*grad_estim+self.grad_one_sided()#/np.sqrt(float(self.k_grad))+self.grad()
+                    grad_estim=mom_coeff*grad_estim+self.grad()#/np.sqrt(float(self.k_grad))+self.grad()
                 # Getting new value                            
 
 
