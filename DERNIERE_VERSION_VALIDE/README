@@ -7,5 +7,7 @@ Dernière mise à jour : le 10/07/2018 -> Ajout de fonctions avec directions sto
                         le 12/07/2018 -> Correction d'une erreur dans l'estimation du gradient de la SPSA. Ajout de variable pour permettre l'enregistrement des données du vecteur de paramètres durant le fonctionnement de la routine SPSA.Ajout d'une SPSA accélérée.
 
                         le 24/07/2018 -> Modification de la SPSA avec direction stochastique et momentum, afin d'obtenir une accélération. Implémentation de limitation sur la taille du domaine.
+
+                        le 20/08/2018 -> Modification de la limitation sur la taille du domaine pour avoir une formulation faible.
                         
                         

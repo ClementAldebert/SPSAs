@@ -22,6 +22,9 @@ Created on Thu Jul 19 14:28:28 2018
 # Modified the Momentum SPSA the 20/07/2018   #
 # So that the momentum is not normalized any- #
 # More normalized                             #
+# Modified the 20/08/2018 so that we can have #
+# A weak constraint on the cost function to   #
+# limit the domain of interest (G.Koenig)     #
 ###############################################
 
 
@@ -95,7 +98,10 @@ class SPSA():
         self.acc=1  # Acceleration factor (product of thetas in accelerating method)
         self.max_acc=5 #Maximal acceleration factor
         
-        self.boundaries=bc # Setting the boundary conditions
+        self.boundaries=np.ones(self.vec_size) # Setting the boundary positions
+        self.dom_center=np.zeros(self.vec_size) # Position of the center of
+        # The domain
+        self.lim_coeff=0. # Coeffcient of increase of the weak constraint
         
 
     #################################################################
@@ -104,11 +110,15 @@ class SPSA():
         
     def cost_func_wrapper(self,Y):
         """ We use this to increment our counter of call to the cost 
-        function"""
+        function. The second part is used to weakly constrain the evaluation of
+        cost function in a given zone by setting exponential values that grows
+        very quickly as soon as we get out of the desired range. This range
+        is given by bnd_pos. The increase is tuned up by lim_coeff"""
  
         self.k_costfun+=1 # We increment
         
-        return self.cost_func(Y)
+        return self.cost_func(Y) + self.lim_coeff*(np.exp(Y-self.dom_center)\
+                              /self.boundaries)
     
     #*****PARAMETERS UPDATE***************#
         
