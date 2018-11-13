@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jul 19 14:28:28 2018
@@ -219,9 +219,12 @@ class SPSA():
     
      #*****LINE-SEARCH algorithm******#
 
-     def line_search(self):
+     def line_search(self,n_try):
        """ A line search algorithm to find the best update parameters
        given a certain estimation of the cost function and of its gradient
+       
+       INPUTS:
+       n_try : Number of try before rejecting step
        
        """
        # We initialize a counter as a security to avoid the worst directions
@@ -244,7 +247,7 @@ class SPSA():
                
                # We add the count and check the safety
                count+=1
-               if count>4 :
+               if count>n_try :
                    break
                # Updating the step size
                self.a/=cost_func_estim/max(self.J[-1],(self.J[-1]-self.c1*np.dot(self.a@self.grad_estim,self.a@self.grad_estim)))
@@ -264,7 +267,7 @@ class SPSA():
                    self.J[-1]-self.c1*np.dot(self.a@self.grad_estim,self.a@self.grad_estim))
 
            # We test the safety to avoid bad timesteps
-           if count < 5 :
+           if count < n_try+1 :
                # Once it's done we save the data
                self.Y-=self.a@self.grad_estim
                self.J.append(cost_func_estim)
@@ -792,11 +795,15 @@ class SPSA():
                         self.Y_his=np.vstack([self.Y_his,self.Y]) 
 
 
-    def SPSA_BFGS(self):
+    def SPSA_BFGS(self,n_restart=5,n_try):
         """ A SPSA algorithm with a line search included.  
         It needs to save data at each iteration. It uses a line search and
         a SPSA approximation. It is up to now not compatible with the boundary 
-        formulation"""
+        formulation
+        
+        INPUTS :
+        n_restart : Number of iterations before restarting the BFGS approximation
+        n_try : Number of try in the line-search"""
         
         # Saying a word 
         print('Ach, ich bin in SPSA BFGS')
@@ -848,10 +855,10 @@ class SPSA():
                 # We can update b
                 self.B+=u+v
                 # I am trying a restart just to see what happens
-                if self.k_grad%5==0 :
+                if self.k_grad%n_restart==0 :
                     self.B=np.diag(np.ones(self.grad_estim.size))
                 # Now we can do the line search
-                self.line_search()
+                self.line_search(n_try=n_try)
 
             # Saving the last iteration of the cost function 
 
