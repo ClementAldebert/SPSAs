@@ -844,14 +844,14 @@ class SPSA():
                 # Then we prepare the two matrices of update
                 # First we use an outer/direct product of the curvature estimate
                 # That we normalize by the last step
-                u=np.outer(self.y,self.y)/np.dot(self.y,-np.dot(self.aself.grad_estim))
+                u=np.outer(self.y,self.y)/np.dot(self.y,np.dot(self.a*self.grad_estim))
                 # Then we use another matrix proportionnal to the product of 
                 # The last gradient estimation. 
                 # We do not use the direction vector but the direction
                 # Vector multiplied by the step size. But since the step size 
                 # Is a scalar present on both numerator and denominator, we can
                 # cancel it
-                v=-np.outer(-np.dot(self.B,self.grad_estim),-np.dot(self.B,self.grad_estim))/(-np.dot(self.p,np.dot(self.B,self.grad_estim)))
+                v=-np.outer(np.dot(self.B,self.grad_estim),np.dot(self.B,self.grad_estim))/(np.dot(self.grad_estim,np.dot(self.B,self.grad_estim)))
                 # We can update b
                 self.B+=u+v
                 # I am trying a restart just to see what happens
