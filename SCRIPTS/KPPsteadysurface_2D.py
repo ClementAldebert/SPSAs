@@ -47,7 +47,7 @@ def Cost_func(theta) :
 
     # model results
     u = np.loadtxt("../KPP_steadysurface/RES/u_steady.txt")[1,]     # chope la 2eme ligne
-    print(u)    
+#    print(u)    
     
     # difference between results
     y = np.subtract(u_ref,u)
@@ -107,7 +107,7 @@ def Cost_func_2D(x,y) :
 Init_point=np.ones(2)
 #Init_point=np.array([random.random() for p in range(2)])
 # So that all methods start at the same point
-args={'Y': Init_point,'cost_func':Cost_func,'tol':1e-3,'n_iter':2000,
+args={'Y': Init_point,'cost_func':Cost_func,'tol':1e-3,'n_iter':10000,
       'gamma':0.101,'alpha':0.602,'A':200,'anim':False,
       'save_Y':True,'n_Y':1 } 
 
@@ -165,7 +165,7 @@ List_SPSA=['SPSA vanilla','SPSA smart']
 SPSA_methods={'SPSA vanilla':Test_SPSA.SPSA_vanilla,
               'SPSA smart':Test_SPSA.SPSA_smart}
 
-SPSA_arg={'SPSA vanilla':None,'SPSA smart':{'n_mean':n_mean}}
+SPSA_arg={'SPSA vanilla':None,'SPSA smart':{'n_mean':n_mean,'mom_coeff':0.9}}
 SPSA_markers={'SPSA vanilla':'*','SPSA smart':'+'}
 
 
@@ -182,11 +182,15 @@ SPSA_exec_model={} # To record the number of calls to the cost function
 for ln in List_SPSA:
     # Reinitializing
     Test_SPSA.__init__(**args)
-    # Setting gain parameters
-    # Parameters for KPP
-    Test_SPSA.c*=1e-3
-    Test_SPSA.a*=1e-1
+    # Setting gain parameters    
 
+    if ln == 'SPSA vanilla':
+        Test_SPSA.c=1e-2
+        Test_SPSA.a=0.1
+    elif ln == 'SPSA smart':
+        Test_SPSA.c=0.01
+        Test_SPSA.a=0.1
+        Test_SPSA.n_iter /= 2   # because the method use twice more evalutations per step
 
     
     # Counting execution time

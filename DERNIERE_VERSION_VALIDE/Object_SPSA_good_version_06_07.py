@@ -30,6 +30,7 @@ Created on Thu Jul 19 14:28:28 2018
 
 
 #*******Packages Import******************#
+import math
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -869,7 +870,7 @@ class SPSA():
             self.Y_his=np.vstack([self.Y_his,self.Y]) # Saving the data
 
 
-    def SPSA_smart(self,n_mean):
+    def SPSA_smart(self,n_mean,mom_coeff=0):
         """ A SPSA algorithm that approximate the local gradient by a gradient estimation
         alongside the last computed gradient and another one alongside a random
         direction orthogonal to the previous gradient. The algorithm is expected
@@ -880,10 +881,11 @@ class SPSA():
         for the moment
         
         INPUTS :
-        n_mean: number of estimations to get the first gradient approximation"""
+        n_mean: number of estimations to get the first gradient approximation
+        mom_coeff: coefficient for the momentum"""
         
         # Saying a word 
-        print('Hello, I am a smart SPSA')
+        print('Hello, I am a smart SPSA (not that smart for the moment ...)')
 
         # Saving the first iteration of cost function
         self.J.append(self.cost_func_wrapper(self.Y))
@@ -894,43 +896,50 @@ class SPSA():
             # We iterate until we reach a certain estimate or a certain number
             # Of iterations
         
-            if self.k_grad==1:
+            if self.k_grad==0:
                 # first iteration based on a mean SPSA to get the best gradient estimation
                 # as possible to start the algorithm
                 # Taking the mean of n_estimates
                 for i in range(n_mean):
+                    delta_k = self.c * (np.array([random.randint(0,1) for p in range(self.vec_size)])-0.5)*2.
+                    Y_plus = self.Y + delta_k
+                    Y_minus = self.Y - delta_k
                     if i==0:
-                        grad_estim=self.grad()
+                        grad_estim = delta_k * (self.cost_func_wrapper(Y_plus)-\
+                                self.cost_func_wrapper(Y_minus))/(2.*self.c**self.vec_size)
                     else :
-                        grad_estim+=self.grad()
+                        grad_estim += delta_k * (self.cost_func_wrapper(Y_plus)-\
+                                self.cost_func_wrapper(Y_minus))/(2.*self.c**self.vec_size)
                 
                     grad_estim/=n_mean
-
             else:
                 # estimate alongside the previous gradient (= tangent)
-                # note that norm(delta_k) = c
-                delta_k = self.c * self.Y[-1] / np.dot(self.Y[-1],self.Y[-1])
+                # note that norm(delta_k) = c^nb_param
+                delta_k = self.c * grad_estim / math.sqrt(np.dot(grad_estim,grad_estim))
                 Y_plus = self.Y + delta_k
                 Y_minus = self.Y - delta_k
-                grad_estim=(self.cost_func_wrapper(Y_plus)-\
-                    self.cost_func_wrapper(Y_minus))/(2.*delta_k)
+                grad_estim_new = delta_k * (self.cost_func_wrapper(Y_plus)-\
+                    self.cost_func_wrapper(Y_minus))/(2.*self.c**self.vec_size)
                 # estimate alongside a random direction orthogonal to the tangent
-                # again, norm(delta_k) = c
+                # again, norm(delta_k) = c^nb_param
                 # x_i ~ N(0,1), i = 1,..., nb of paramaters
                 x = np.array([random.gauss(0,1) for p in range(self.vec_size)])
                 # remove the contribution in the direction of the previous
                 # direction by Gram-Schmidt decomposition
-                x -= np.dot(delta_k,x) * delta_k
+                x -= np.dot(delta_k,x) * delta_k / np.dot(delta_k,delta_k)
                 # rescale to get the desired norm of perturbation
-                delta_k = x * self.c / np.dot(x,x)
+                delta_k2 = self.c * x / math.sqrt(np.dot(x,x))
                 # gradient estimation (add to the first one)
-                Y_plus = self.Y + delta_k
-                Y_minus = self.Y - delta_k
-                grad_estim+=(self.cost_func_wrapper(Y_plus)-\
-                    self.cost_func_wrapper(Y_minus))/(2.*delta_k)
-                
+                Y_plus = self.Y + delta_k2
+                Y_minus = self.Y - delta_k2
+                grad_estim_new2 = delta_k2 * (self.cost_func_wrapper(Y_plus)-\
+                    self.cost_func_wrapper(Y_minus))/(2.*self.c**self.vec_size)
+                grad_estim_new += grad_estim_new2
+                # add a momentum effect
+                grad_estim = grad_estim * mom_coeff + grad_estim_new
+                print(grad_estim_new,grad_estim_new2,grad_estim)
 
-            self.k_grad+=1        
+            self.k_grad+=1
             self.Y-= np.dot(self.a,grad_estim)  # update the parameter values
             self.J.append(self.cost_func_wrapper(self.Y))   # new cost function value
          
