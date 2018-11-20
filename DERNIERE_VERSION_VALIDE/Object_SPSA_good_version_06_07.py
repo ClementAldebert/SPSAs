@@ -93,18 +93,18 @@ class SPSA():
         self.acc=1  # Acceleration factor (product of thetas in accelerating method)
         self.max_acc=5 #Maximal acceleration factor
         
-        self.boundaries=np.ones(self.vec_size) # Setting the boundary positions
+        self.boundaries=None#np.ones(self.vec_size) # Setting the boundary positions
         self.dom_center=np.zeros(self.vec_size) # Position of the center of
         # The domain
         self.lim_coeff=0. # Coeffcient of increase of the weak constraint
         
         #line-search related variables
-        self.grad_his=None # This is used to store the gradient estimations
+        self.grad_his=None # This is used to store the gradient estimations
         self.grad_estim=[] # An empty vector at first
         self.c1=1e-3 # Armijo parameter for line-search. Hard to tune. It is ok to set it to 0
 
         # BFGS related variables
-        self.B=[] # Storing the hessian approximation
+        self.B=[] # Storing the hessian approximation
         self.y=[] # Storing the hessian approximation for the last step
 
     #################################################################
@@ -120,8 +120,8 @@ class SPSA():
  
         self.k_costfun+=1 # We increment
         
-        return self.cost_func(Y) + self.lim_coeff*(np.exp(Y-self.dom_center)\
-                              /self.boundaries)
+        return self.cost_func(Y) #+ self.lim_coeff*(np.exp(Y-self.dom_center)\
+                              #/self.boundaries)
     
     #*****PARAMETERS UPDATE***************#
         
@@ -216,10 +216,12 @@ class SPSA():
             grad_estim=self.dir_mat*grad_estim
         
         return grad_estim
+
+
     
      #*****LINE-SEARCH algorithm******#
 
-     def line_search(self,n_try):
+    def line_search(self,n_try):
        """ A line search algorithm to find the best update parameters
        given a certain estimation of the cost function and of its gradient
        
@@ -315,6 +317,7 @@ class SPSA():
         
         self.J.append(self.cost_func_wrapper(self.Y)) 
         # We start our first estimate
+        print(self.J)
         
         while self.J[-1] > self.tol and self.k_grad < self.n_iter :
             # We iterate until we reach a certain estimate or a certain number
@@ -322,8 +325,8 @@ class SPSA():
         
             self.k_grad+=1
             
-            self.update_c()
-            self.update_a() # We update our gain variables
+#            self.update_c()
+#            self.update_a() # We update our gain variables
             
             if self.boundaries is None :
                 self.Y-= np.dot(self.a,self.grad()) # We call directly the 
@@ -795,7 +798,7 @@ class SPSA():
                         self.Y_his=np.vstack([self.Y_his,self.Y]) 
 
 
-    def SPSA_BFGS(self,n_restart=5,n_try):
+    def SPSA_BFGS(self,n_restart=5,n_try=4):
         """ A SPSA algorithm with a line search included.  
         It needs to save data at each iteration. It uses a line search and
         a SPSA approximation. It is up to now not compatible with the boundary 
@@ -864,3 +867,80 @@ class SPSA():
 
             print("Hessian estimation",self.B)
             self.Y_his=np.vstack([self.Y_his,self.Y]) # Saving the data
+
+
+    def SPSA_smart(self,n_mean):
+        """ A SPSA algorithm that approximate the local gradient by a gradient estimation
+        alongside the last computed gradient and another one alongside a random
+        direction orthogonal to the previous gradient. The algorithm is expected
+        to be highly sensitive to the first computed gradient, which is estimated by a
+        mean-classical-SPSA algorithm.
+        
+        /!\ Note: in this algorithm version, I do not update the values of a and c
+        for the moment
+        
+        INPUTS :
+        n_mean: number of estimations to get the first gradient approximation"""
+        
+        # Saying a word 
+        print('Hello, I am a smart SPSA')
+
+        # Saving the first iteration of cost function
+        self.J.append(self.cost_func_wrapper(self.Y))
+            
+            
+        # loop of smart SPSA
+        while self.J[-1] > self.tol and self.k_grad < self.n_iter :
+            # We iterate until we reach a certain estimate or a certain number
+            # Of iterations
+        
+            if self.k_grad==1:
+                # first iteration based on a mean SPSA to get the best gradient estimation
+                # as possible to start the algorithm
+                # Taking the mean of n_estimates
+                for i in range(n_mean):
+                    if i==0:
+                        grad_estim=self.grad()
+                    else :
+                        grad_estim+=self.grad()
+                
+                    grad_estim/=n_mean
+
+            else:
+                # estimate alongside the previous gradient (= tangent)
+                # note that norm(delta_k) = c
+                delta_k = self.c * self.Y[-1] / np.dot(self.Y[-1],self.Y[-1])
+                Y_plus = self.Y + delta_k
+                Y_minus = self.Y - delta_k
+                grad_estim=(self.cost_func_wrapper(Y_plus)-\
+                    self.cost_func_wrapper(Y_minus))/(2.*delta_k)
+                # estimate alongside a random direction orthogonal to the tangent
+                # again, norm(delta_k) = c
+                # x_i ~ N(0,1), i = 1,..., nb of paramaters
+                x = np.array([random.gauss(0,1) for p in range(self.vec_size)])
+                # remove the contribution in the direction of the previous
+                # direction by Gram-Schmidt decomposition
+                x -= np.dot(delta_k,x) * delta_k
+                # rescale to get the desired norm of perturbation
+                delta_k = x * self.c / np.dot(x,x)
+                # gradient estimation (add to the first one)
+                Y_plus = self.Y + delta_k
+                Y_minus = self.Y - delta_k
+                grad_estim+=(self.cost_func_wrapper(Y_plus)-\
+                    self.cost_func_wrapper(Y_minus))/(2.*delta_k)
+                
+
+            self.k_grad+=1        
+            self.Y-= np.dot(self.a,grad_estim)  # update the parameter values
+            self.J.append(self.cost_func_wrapper(self.Y))   # new cost function value
+         
+            # Plotting the animation
+            if self.anim :
+                if self.k_grad%self.n_anim==0 : 
+                    self.Anim_func() # Call the function for animation
+
+            # Saving the data
+            if self.save_Y :
+                if self.k_grad%self.n_Y==0 :
+                    self.Y_his=np.vstack([self.Y_his,self.Y])
+           
